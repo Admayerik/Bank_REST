@@ -3,9 +3,39 @@ version: '3.8'
 services:
   db:
     image: postgres:15
+    container_name: postgres_db
+    restart: always
     environment:
+      POSTGRES_DB: test
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 12345
-      POSTGRES_DB: test
     ports:
-      - "5432:543
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: effective_mobile_app
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/test
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 12345
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      SPRING_LIQUIBASE_CHANGE_LOG: classpath:db/migration/liquid-migration.yml
+      SERVER_PORT: 8080
+      SPRING_APPLICATION_NAME: effective-mobile
+      SECURITY_JWT_SECRET: SecretKey12345
+      SECURITY_JWT_EXPIRATION: 3600000
+      SPRINGDOC_SWAGGER_UI_PATH: /swagger-ui.html
+      SPRINGDOC_API_DOCS_PATH: /v3/api-docs
+      SPRINGDOC_SHOW_ACTUATOR: "true"
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:

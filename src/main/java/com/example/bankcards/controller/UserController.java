@@ -36,7 +36,11 @@ public class UserController {
     }
 
     @GetMapping("/cards")
-    private List<CardDto> getUserCards(@AuthenticationPrincipal UserDetails userDetails){
-        return cardService.getUserCards(userDetails);
+    private List<CardDto> getUserCards(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ){
+        return cardService.getUserCards(userDetails, page, size);
     }
 }

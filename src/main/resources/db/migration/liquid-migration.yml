@@ -1,7 +1,19 @@
 databaseChangeLog:
+  - preConditions:
+      onFail: HALT
+      preConditions:
+        - dbms:
+            type: postgresql
   - changeSet:
       id: 1
       author: igor
+      preConditions:
+        onFail: HALT
+        preConditions:
+          - not:
+              preConditions:
+                - tableExists:
+                    tableName: users
       changes:
         - createTable:
             tableName: users
@@ -19,6 +31,13 @@ databaseChangeLog:
   - changeSet:
       id: 2
       author: igor
+      preConditions:
+        - tableExists:
+            tableName: users
+        - not:
+            preConditions:
+              - tableExists:
+                  tableName: cards
       changes:
         - createTable:
             tableName: cards

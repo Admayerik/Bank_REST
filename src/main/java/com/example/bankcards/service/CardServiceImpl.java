@@ -6,12 +6,21 @@ import com.example.bankcards.entity.User;
 import com.example.bankcards.repository.CardRepository;
 import com.example.bankcards.repository.UserRepository;
 import com.example.bankcards.util.CardMapper;
+import com.example.bankcards.util.CardSpecification;
 import com.example.bankcards.util.CardStatusEnum;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
+import java.util.Date;
 import java.util.List;
 
+@Service
 public class CardServiceImpl implements CardService {
     private final CardRepository cardRepository;
     private final UserRepository userRepository;
@@ -30,30 +39,44 @@ public class CardServiceImpl implements CardService {
         return card.getBalance();
     }
 
-    public void putTransfer(String sendCardNumber, String reciveCardNumber, Double summ){
+    @Transactional
+    public void putTransfer(String sendCardNumber, String reciveCardNumber, Double summ) {
         Card sendCard = cardRepository.findByNumber(sendCardNumber)
                 .orElseThrow(() -> new RuntimeException("Карта не найдена"));
         Card reciveCard = cardRepository.findByNumber(reciveCardNumber)
                 .orElseThrow(() -> new RuntimeException("Карта не найдена"));
-        if (summ <= sendCard.getBalance()){
-            sendCard.setBalance(sendCard.getBalance() - summ);
-            reciveCard.setBalance(reciveCard.getBalance() + summ);
-            cardRepository.save(sendCard);
-            cardRepository.save(reciveCard);
+
+        if (sendCard.getBalance() < summ) {
+            throw new RuntimeException("Недостаточно средств для перевода");
         }
-        else {
-            throw new RuntimeException("Карта не найдена");
-        }
+
+        sendCard.setBalance(sendCard.getBalance() - summ);
+        reciveCard.setBalance(reciveCard.getBalance() + summ);
+        cardRepository.save(sendCard);
+        cardRepository.save(reciveCard);
     }
 
-    public List<CardDto> getUserCards(UserDetails userDetails){
+    public List<CardDto> getUserCards(UserDetails userDetails, int page, int size){
         User user = userRepository.findByName(userDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден"));
-        return cardMapper.toDtoList(user.getCardList());
+
+        Page<Card> cardPage = cardRepository.findByUser(user, PageRequest.of(page, size));
+        List<CardDto> cardDto = cardMapper.toDtoList(cardPage.getContent());
+
+        return cardDto;
     }
 
-    public List<CardDto> getCards(){
-        return cardMapper.toDtoList(cardRepository.findAll());
+    public List<CardDto> getCards(int page, int size){
+        return cardMapper.toDtoList(cardRepository.findAll(PageRequest.of(page, size)).getContent());
+    }
+
+    public List<CardDto> getCardsWithSpecs(String status, String number, Double balance, Date validTill, int page, int size){
+        Specification<Card> spec = Specification.where(CardSpecification.hasStatus(status))
+                .and(CardSpecification.hasNumber(number))
+                .and(CardSpecification.hasBalance(balance))
+                .and(CardSpecification.isValidTill(validTill));
+
+        return cardMapper.toDtoList(cardRepository.findAll(spec, PageRequest.of(page, size)).getContent());
     }
 
     public void createCard(CardDto cardDto){

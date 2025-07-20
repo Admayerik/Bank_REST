@@ -4,12 +4,11 @@ package com.example.bankcards.controller;
 import com.example.bankcards.dto.CardDto;
 import com.example.bankcards.dto.UserDto;
 import com.example.bankcards.service.CardService;
-import com.example.bankcards.service.CardServiceImpl;
 import com.example.bankcards.service.UserService;
-import com.example.bankcards.service.UserServiceImpl;
 import com.example.bankcards.util.CardStatusEnum;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -24,8 +23,23 @@ public class AdminController {
     }
 
     @GetMapping("/cards")
-    private List<CardDto> getCards(){
-        return cardService.getCards();
+    private List<CardDto> getCards(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ){
+        return cardService.getCards(page, size);
+    }
+
+    @GetMapping("/search")
+    public List<CardDto> getCardsWithSpecs(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String number,
+            @RequestParam(required = false) Double balance,
+            @RequestParam(required = false) Date validTill,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ){
+        return cardService.getCardsWithSpecs(status, number, balance, validTill, page, size);
     }
 
     @PostMapping("/card/create")
